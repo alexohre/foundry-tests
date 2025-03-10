@@ -37,6 +37,7 @@ contract RewardToken {
 
     constructor() {
         owner = msg.sender;
+        mintAllToOwner();
     }
 
     function setCrowdfundingContract(
@@ -61,12 +62,9 @@ contract RewardToken {
     //     _mint(to, amount);
     // }
 
-    function mintReward(address to, uint256 amount) external {
-        // require(
-        //     msg.sender == crowdfundingContract,
-        //     "Only crowdfunding contract can mint"
-        // );
-        _mint(to, amount);
+    function mintAllToOwner() private onlyOwner {
+        // _mint(owner, _totalSupply);
+        _mint(owner, 5000);
     }
 
     function transfer(
@@ -114,7 +112,8 @@ contract RewardToken {
         emit Transfer(sender, recipient, amount);
     }
 
-    function _mint(address account, uint256 amount) internal {
+    function _mint(address account, uint256 amount) private {
+        require(msg.sender == owner, "Only owner can mint");
         require(account != address(0), "Mint to the zero address");
 
         _totalSupply += amount;

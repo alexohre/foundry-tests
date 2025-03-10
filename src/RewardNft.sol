@@ -1,76 +1,88 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.24;
+// SPDX-License-Identifier: MIT
 
-/**
- * @title RewardNft- Simplified ERC721
- * @dev Basic NFT for top contributors in the crowdfunding platform
- */
-contract RewardNft {
-    string public name = "RewardNft";
-    string public symbol = "RNFT";
+pragma solidity ^0.8.17;
 
-    // Owner of the contract
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+// import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
+contract RewardNft is ERC721 {
+    // using Counters for Counters.Counter;
+    using Strings for uint256;
+
+    uint256 public counter;
+
     address public owner;
-    // Only the crowdfunding contract can mint NFTs
-    address public crowdfundingContract;
 
-    // Token ID to owner address
-    mapping(uint256 => address) private _owners;
-    // Owner address to token count
-    mapping(address => uint256) private _balances;
+    // Counters.Counter private _nftIds;
 
-    // Counter for token IDs
-    uint256 private _tokenIdCounter;
+    uint256 public constant MAX_SUPPLY = 10;
 
-    // Events
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 indexed tokenId
-    );
+    uint256 public totalMinted;
 
-    // Modifier to restrict functions to owner
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not authorized");
-        _;
-    }
+    string public uri;
 
-    constructor() {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        string memory _uri
+    ) ERC721(name_, symbol_) {
+        uri = _uri;
         owner = msg.sender;
     }
 
-    function setCrowdfundingContract(
-        address _crowdfundingContract
-    ) external onlyOwner {
-        crowdfundingContract = _crowdfundingContract;
+    // function mintNFT(address minter) external {
+    //     uint256 newTokenId = _nftIds.current();
+    //     require(newTokenId <= MAX_SUPPLY, "limit exceeded");
+    //     _safeMint(minter, newTokenId);
+    //     _nftIds.increment();
+    //     totalMinted += 1;
+    // }
+
+    function mintNFT(address to) public returns (uint256) {
+        uint256 currentCount = counter;
+        if (to == address(0)) {
+            revert ERC721InvalidReceiver(address(0));
+        }
+        address previousOwner = _update(to, currentCount, address(0));
+        counter++;
+        if (previousOwner != address(0)) {
+            revert ERC721InvalidSender(address(0));
+        }
+
+        return counter;
     }
 
-    function mintNFT(address to) external returns (uint256) {
-        require(
-            msg.sender == crowdfundingContract,
-            "Only crowdfunding contract can mint"
-        );
-        require(to != address(0), "Mint to the zero address");
-
-        uint256 tokenId = _tokenIdCounter;
-        _tokenIdCounter++;
-
-        _balances[to] += 1;
-        _owners[tokenId] = to;
-
-        emit Transfer(address(0), to, tokenId);
-
-        return tokenId;
+    function getTotalMinted() public view returns (uint256) {
+        return totalMinted;
     }
 
-    function balanceOf(address _owner) external view returns (uint256) {
-        require(_owner != address(0), "Balance query for zero address");
-        return _balances[_owner];
+    function _baseURI() internal view override returns (string memory) {
+        return uri;
     }
 
-    function ownerOf(uint256 tokenId) external view returns (address) {
-        address _owner = _owners[tokenId];
-        require(_owner != address(0), "Owner query for nonexistent token");
-        return _owner;
+    function setBaseUri(string memory _uri) public {
+        uri = _uri;
     }
+
+    // function tokenURI(
+    //     uint256 tokenId
+    // ) public view override returns (string memory) {
+    //     _requireMinted(tokenId);
+
+    //     string memory baseURI = _baseURI();
+    //     return
+    //         bytes(baseURI).length > 0
+    //             ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+    //             : "";
+    // }
+
+    // function setTokenURI() public {
+    //     _setTokenURI(
+    //         totalMinted,
+    //     "ipfs://QmeYhWhdX1ALiF5AeaHM5VwAR6XEUqL58kmdEx8GxxPkXk"
+    //     );
+    // }
 }

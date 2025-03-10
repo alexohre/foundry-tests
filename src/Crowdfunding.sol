@@ -11,10 +11,10 @@ contract Crowdfunding {
     uint public constant NFT_THRESHOLD = 5 ether;
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
-    address public constant NFT_CONTRACT_ADDRESS =
-        0x2e234DAe75C793f67A35089C9d99245E1C58470b;
-    address public constant TOKEN_CONTRACT_ADDRESS =
-        0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;
+    // address public constant NFT_CONTRACT_ADDRESS =
+    //     0x2e234DAe75C793f67A35089C9d99245E1C58470b;
+    // address public constant TOKEN_CONTRACT_ADDRESS =
+    //     0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;
 
     RewardToken public rewardToken;
     RewardNft public rewardNFT;
@@ -30,10 +30,14 @@ contract Crowdfunding {
     event NFTRewardSent(address indexed contributor, uint256 tokenId);
     event FundsWithdrawn(address indexed projectOwner, uint256 amount);
 
-    constructor(uint256 _tokenRewardRate) {
+    constructor(
+        uint256 _tokenRewardRate,
+        address _rewardToken,
+        address _rewardNft
+    ) {
         Owner = msg.sender;
-        rewardToken = RewardToken(TOKEN_CONTRACT_ADDRESS);
-        rewardNFT = RewardNft(NFT_CONTRACT_ADDRESS);
+        rewardToken = RewardToken(_rewardToken);
+        rewardNFT = RewardNft(_rewardNft);
         tokenRewardRate = _tokenRewardRate;
     }
 
@@ -57,12 +61,13 @@ contract Crowdfunding {
         }
 
         // Calculate token reward
-        uint256 tokenReward = (msg.value * tokenRewardRate) / 1 ether;
-        // console.log("token reward____%s", tokenReward);
+        uint256 tokenReward = calculateReward(msg.value);
+
+        console.log("token reward____%s", tokenReward);
 
         if (tokenReward > 0) {
             console.log("the contract caller____%s", msg.sender);
-            rewardToken.mintReward(msg.sender, tokenReward);
+            sendRewardToken(tokenReward, msg.sender);
             console.log("token reward____%s", tokenReward);
             emit TokenRewardSent(msg.sender, tokenReward);
         }
@@ -78,6 +83,17 @@ contract Crowdfunding {
         }
 
         emit ContributionReceived(msg.sender, msg.value);
+    }
+
+    function calculateReward(uint256 _value) private returns (uint256) {
+        uint256 tokenReward = (_value * tokenRewardRate) / 1 ether;
+
+        return tokenReward;
+    }
+
+    function sendRewardToken(uint256 _amount, address _recipient) private {
+        uint256 rewardAmount = calculateReward(_amount);
+        rewardToken.transferFrom(address(this), _recipient, rewardAmount);
     }
 
     function _calculateContributionAndRefund(
